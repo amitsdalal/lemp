@@ -2,7 +2,7 @@
 Get a fully pre-configured server with Magento and LEMP stack in just 20 minutes.
 
 Magento installation including: <br/>
-- WEBMIN CONTROL PANEL
+- No Panel
 - VARNISH
 - NGINX
 - PHP 7
