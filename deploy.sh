@@ -528,6 +528,33 @@ if [ "${repo_percona_install}" == "y" ];then
               sed -i "/Restart=on-failure/a RestartSec=5" /etc/systemd/system/mysqld.service
               systemctl daemon-reload
               systemctl enable mysqld >/dev/null 2>&1
+              if [ ! -f /root/.my.cnf ]; then
+              systemctl start mysqld.service
+              MYSQL_ROOT_PASS_GEN=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
+              MYSQL_ROOT_PASS="${MYSQL_ROOT_PASS_GEN}${RANDOM}"
+              MYSQL_ROOT_TMP_PASS=$(grep 'temporary password is generated for' /var/log/mysqld.log | awk '{print $NF}')
+              ## reset temporary password
+mysql --connect-expired-password -u root -p${MYSQL_ROOT_TMP_PASS}  <<EOMYSQL
+ALTER USER 'root'@'localhost' IDENTIFIED BY "${MYSQL_ROOT_PASS}";
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+exit
+EOMYSQL
+cat > /root/.mytop <<END
+user=root
+pass=${MYSQL_ROOT_PASS}
+db=mysql
+END
+cat > /root/.my.cnf <<END
+[client]
+user=root
+password="${MYSQL_ROOT_PASS}"
+END
+fi
+chmod 600 /root/.my.cnf /root/.mytop
               echo
               WHITETXT "Downloading my.cnf file from webscoot Github repository"
               wget -qO /etc/my.cnf https://raw.githubusercontent.com/amitsdalal/lemp/master/my.cnf
@@ -558,7 +585,7 @@ gpgcheck=1
 gpgkey=https://repo.proxysql.com/ProxySQL/repo_pub_key
 EOF
               dnf -y -q install proxysql >/dev/null 2>&1
-	      systemctl disable proxysql >/dev/null 2>&1
+	            systemctl disable proxysql >/dev/null 2>&1
               else
               echo
               REDTXT "DATABASE INSTALLATION ERROR"
@@ -666,7 +693,7 @@ if [ "${repo_remi_install}" == "y" ];then
              sed -i "s/PrivateTmp=true/PrivateTmp=false/" /etc/systemd/system/php-fpm.service
              sed -i "/^After.*/a OnFailure=service-status-mail@%n.service" /etc/systemd/system/php-fpm.service
              sed -i "/\[Install\]/i Restart=on-failure\nRestartSec=5\n" /etc/systemd/system/php-fpm.service
-	     sed -i "/^OnFailure.*/a StartLimitBurst=5" /etc/systemd/system/php-fpm.service
+      	     sed -i "/^OnFailure.*/a StartLimitBurst=5" /etc/systemd/system/php-fpm.service
              sed -i "/^StartLimitBurst.*/a StartLimitIntervalSec=33" /etc/systemd/system/php-fpm.service
              systemctl daemon-reload
              systemctl enable php-fpm >/dev/null 2>&1
@@ -1008,21 +1035,21 @@ echo
 	 echo "---> WILL BE DOWNLOADED TO ${MAGE_WEB_ROOT_PATH}"
      echo
         mkdir -p ${MAGE_WEB_ROOT_PATH} && cd $_
-	userdel -r centos >/dev/null 2>&1
-	## create master user
-        useradd -d ${MAGE_WEB_ROOT_PATH%/*} -s /sbin/nologin ${MAGE_OWNER} >/dev/null 2>&1
-	## create slave php user
-	MAGE_PHPFPM_USER="php-${MAGE_OWNER}"
-  	useradd -M -s /sbin/nologin -d ${MAGE_WEB_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
-	usermod -g ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
+	      userdel -r centos >/dev/null 2>&1
+	      ## create master user
+        useradd -d ${MAGE_WEB_ROOT_PATH%/*} -s /bin/bash ${MAGE_OWNER} >/dev/null 2>&1
+	      ## create slave php user
+	      MAGE_PHPFPM_USER="php-${MAGE_OWNER}"
+        useradd -M -s /sbin/nologin -d ${MAGE_WEB_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
+	      usermod -g ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
         MAGE_OWNER_PASS=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
         echo "${MAGE_OWNER}:${MAGE_OWNER_PASS}"  | chpasswd  >/dev/null 2>&1
         chmod 711 /home/${MAGE_OWNER}
-        chown -R ${MAGE_OWNER}:${MAGE_PHPFPM_USER} ${MAGE_WEB_ROOT_PATH%/*}
+        chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH%/*}
         chmod 2770 ${MAGE_WEB_ROOT_PATH}
         echo
 	        ln -s /usr/bin/composer /usr/local/bin/composer
-		su ${MAGE_OWNER} -s /bin/bash -c "${REPO_MAGE} ."
+		      su ${MAGE_OWNER} -s /bin/bash -c "${REPO_MAGE} ."
         echo
      echo
 WHITETXT "============================================================================="
@@ -1030,10 +1057,10 @@ GREENTXT "      == MAGENTO DOWNLOADED AND READY FOR INSTALLATION =="
 WHITETXT "============================================================================="
 su ${MAGE_OWNER} -s /bin/bash -c "echo 007 > magento_umask" 
 mkdir -p /opt/webscoot/cfg/
-if [ -f /opt/webscoot/cfg/.webscoot_index ]; then
-sed -i "s,webshop.*,webshop ${MAGE_DOMAIN}    ${MAGE_WEB_ROOT_PATH}    ${MAGE_OWNER}   ${MAGE_OWNER_PASS}  ${MAGE_VERSION}  ${MAGE_VERSION_FULL} ${MAGE_PHPFPM_USER}," /opt/webscoot/cfg/.webscoot_index
+if [ -f /opt/webscoot/cfg/.${MAGE_DOMAIN} ]; then
+sed -i "s,webshop.*,webshop ${MAGE_DOMAIN}    ${MAGE_WEB_ROOT_PATH}    ${MAGE_OWNER}   ${MAGE_OWNER_PASS}  ${MAGE_VERSION}  ${MAGE_VERSION_FULL} ${MAGE_PHPFPM_USER}," /opt/webscoot/cfg/.${MAGE_DOMAIN}
 else
-cat >> /opt/webscoot/cfg/.webscoot_index <<END
+cat >> /opt/webscoot/cfg/.${MAGE_DOMAIN} <<END
 webshop ${MAGE_DOMAIN}    ${MAGE_WEB_ROOT_PATH}    ${MAGE_OWNER}   ${MAGE_OWNER_PASS}  ${MAGE_VERSION}  ${MAGE_VERSION_FULL} ${MAGE_PHPFPM_USER}
 END
 fi
@@ -1051,34 +1078,7 @@ printf "\033c"
 WHITETXT "============================================================================="
 GREENTXT "CREATE MAGENTO DATABASE AND DATABASE USER"
 echo
-if [ ! -f /root/.my.cnf ]; then
-systemctl start mysqld.service
-MYSQL_ROOT_PASS_GEN=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
-MYSQL_ROOT_PASS="${MYSQL_ROOT_PASS_GEN}${RANDOM}"
-MYSQL_ROOT_TMP_PASS=$(grep 'temporary password is generated for' /var/log/mysqld.log | awk '{print $NF}')
-## reset temporary password
-mysql --connect-expired-password -u root -p${MYSQL_ROOT_TMP_PASS}  <<EOMYSQL
-ALTER USER 'root'@'localhost' IDENTIFIED BY "${MYSQL_ROOT_PASS}";
-DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
-DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
-exit
-EOMYSQL
-cat > /root/.mytop <<END
-user=root
-pass=${MYSQL_ROOT_PASS}
-db=mysql
-END
-cat > /root/.my.cnf <<END
-[client]
-user=root
-password="${MYSQL_ROOT_PASS}"
-END
-fi
-chmod 600 /root/.my.cnf /root/.mytop
-MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.webscoot_index)
+MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 MAGE_DB_PASS_GEN=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_{}()<>-' | fold -w 15 | head -n 1)
 MAGE_DB_PASS="${MAGE_DB_PASS_GEN}${RANDOM}"
 MAGE_DB_GROUP="$(openssl rand -hex 4)"
@@ -1098,7 +1098,7 @@ exit
 EOMYSQL
 echo
 mkdir -p /opt/webscoot/cfg/
-cat >> /opt/webscoot/cfg/.webscoot_index <<END
+cat >> /opt/webscoot/cfg/.${MAGE_DOMAIN} <<END
 database   ${MAGE_DB_HOST}   ${MAGE_DB_NAME}   ${MAGE_DB_USER_NAME}   ${MAGE_DB_PASS}  ${MYSQL_ROOT_PASS}
 END
 echo
@@ -1113,23 +1113,23 @@ printf "\033c"
 
 "install")
 printf "\033c"
-MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_VERSION_FULL=$(awk '/webshop/ { print $7 }' /opt/webscoot/cfg/.webscoot_index)
+MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_VERSION_FULL=$(awk '/webshop/ { print $7 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 echo
 BLUEBG   "~    MAGENTO ${MAGE_VERSION} (${MAGE_VERSION_FULL}) INSTALLATION    ~"
 echo "-------------------------------------------------------------------------------------"
 echo
-MAGE_WEB_ROOT_PATH=$(awk '/webshop/ { print $3 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_OWNER=$(awk '/webshop/ { print $4 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_PHPFPM_USER=$(awk '/webshop/ { print $8 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_DOMAIN=$(awk '/webshop/ { print $2 }' /opt/webscoot/cfg/.webscoot_index)
-DB_HOST=$(awk '/database/ { print $2 }' /opt/webscoot/cfg/.webscoot_index)
-DB_NAME=$(awk '/database/ { print $3 }' /opt/webscoot/cfg/.webscoot_index)
-DB_USER_NAME=$(awk '/database/ { print $4 }' /opt/webscoot/cfg/.webscoot_index)
-DB_PASS=$(awk '/database/ { print $5 }' /opt/webscoot/cfg/.webscoot_index)
+MAGE_WEB_ROOT_PATH=$(awk '/webshop/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_OWNER=$(awk '/webshop/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_PHPFPM_USER=$(awk '/webshop/ { print $8 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_DOMAIN=$(awk '/webshop/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+DB_HOST=$(awk '/database/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+DB_NAME=$(awk '/database/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+DB_USER_NAME=$(awk '/database/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+DB_PASS=$(awk '/database/ { print $5 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 
 cd ${MAGE_WEB_ROOT_PATH}
-chown -R ${MAGE_OWNER}:${MAGE_PHPFPM_USER} ${MAGE_WEB_ROOT_PATH}
+chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH}
 echo
 echo "---> ENTER SETUP INFORMATION"
 echo
@@ -1146,7 +1146,7 @@ read -e -p "---> Enter your email: " -i "admin@${MAGE_DOMAIN}"  MAGE_ADMIN_EMAIL
 read -e -p "---> Enter your admins login name: " -i "admin"  MAGE_ADMIN_LOGIN
 MAGE_ADMIN_PASSGEN=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 10 | head -n 1)
 read -e -p "---> Use generated admin password: " -i "${MAGE_ADMIN_PASSGEN}${RANDOM}"  MAGE_ADMIN_PASS
-read -e -p "---> Enter your shop url: " -i "http://${MAGE_DOMAIN}/"  MAGE_SITE_URL
+read -e -p "---> Enter your shop url: " -i "https://${MAGE_DOMAIN}/"  MAGE_SITE_URL
 echo
 WHITETXT "Language, Currency and Timezone settings"
 echo
@@ -1179,7 +1179,7 @@ su ${MAGE_OWNER} -s /bin/bash -c "bin/magento setup:install --base-url=${MAGE_SI
 
 mkdir -p /opt/webscoot
 mysqldump --single-transaction --routines --triggers --events ${MAGE_DB_NAME} | gzip > /opt/webscoot/${MAGE_DB_NAME}.sql.gz
-cp app/etc/env.php  /opt/webscoot/env.php.default
+cp app/etc/env.php  /opt/webscoot/env.php.default-${MAGE_DOMAIN}
 
 echo
     WHITETXT "============================================================================="
@@ -1188,7 +1188,7 @@ echo
     echo
     WHITETXT "============================================================================="
 echo
-cat >> /opt/webscoot/cfg/.webscoot_index <<END
+cat >> /opt/webscoot/cfg/.${MAGE_DOMAIN} <<END
 mageadmin  ${MAGE_ADMIN_LOGIN}  ${MAGE_ADMIN_PASS}  ${MAGE_ADMIN_EMAIL}  ${MAGE_TIMEZONE}  ${MAGE_LOCALE} ${MAGE_ADMIN_PATH_RANDOM}
 END
 
@@ -1219,24 +1219,24 @@ if [[ ${RESULT} == up ]]; then
 fi
 
 printf "\033c"
-MAGE_DOMAIN=$(awk '/webshop/ { print $2 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_WEB_ROOT_PATH=$(awk '/webshop/ { print $3 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_OWNER=$(awk '/webshop/ { print $4 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_PHPFPM_USER=$(awk '/webshop/ { print $8 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_OWNER_PASS=$(awk '/webshop/ { print $5 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_ADMIN_EMAIL=$(awk '/mageadmin/ { print $4 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_TIMEZONE=$(awk '/mageadmin/ { print $5 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_LOCALE=$(awk '/mageadmin/ { print $6 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_ADMIN_LOGIN=$(awk '/mageadmin/ { print $2 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_ADMIN_PASS=$(awk '/mageadmin/ { print $3 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_ADMIN_PATH_RANDOM=$(awk '/mageadmin/ { print $7 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_VERSION_FULL=$(awk '/webshop/ { print $7 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_DB_HOST=$(awk '/database/ { print $2 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_DB_NAME=$(awk '/database/ { print $3 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_DB_USER_NAME=$(awk '/database/ { print $4 }' /opt/webscoot/cfg/.webscoot_index)
-MAGE_DB_PASS=$(awk '/database/ { print $5 }' /opt/webscoot/cfg/.webscoot_index)
-MYSQL_ROOT_PASS=$(awk '/database/ { print $6 }' /opt/webscoot/cfg/.webscoot_index)
+MAGE_DOMAIN=$(awk '/webshop/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_WEB_ROOT_PATH=$(awk '/webshop/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_OWNER=$(awk '/webshop/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_PHPFPM_USER=$(awk '/webshop/ { print $8 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_OWNER_PASS=$(awk '/webshop/ { print $5 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_ADMIN_EMAIL=$(awk '/mageadmin/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_TIMEZONE=$(awk '/mageadmin/ { print $5 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_LOCALE=$(awk '/mageadmin/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_ADMIN_LOGIN=$(awk '/mageadmin/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_ADMIN_PASS=$(awk '/mageadmin/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_ADMIN_PATH_RANDOM=$(awk '/mageadmin/ { print $7 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_VERSION_FULL=$(awk '/webshop/ { print $7 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_DB_HOST=$(awk '/database/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_DB_NAME=$(awk '/database/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_DB_USER_NAME=$(awk '/database/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MAGE_DB_PASS=$(awk '/database/ { print $5 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
+MYSQL_ROOT_PASS=$(awk '/database/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 NEW_SSH_PORT=$(awk '/SSH/ { print $2 }' /opt/webscoot/cfg/.sshport)
 SFTP_PORT=$(awk '/SFTP/ { print $2 }' /opt/webscoot/cfg/.sshport)
 echo
@@ -1244,22 +1244,23 @@ BLUEBG "~    POST-INSTALLATION CONFIGURATION    ~"
 echo "-------------------------------------------------------------------------------------"
 echo
 GREENTXT "SERVER HOSTNAME SETTINGS"
-hostnamectl set-hostname server.${MAGE_DOMAIN} --static
+#hostnamectl set-hostname server.${MAGE_DOMAIN} --static
 echo
 GREENTXT "SERVER TIMEZONE SETTINGS"
 timedatectl set-timezone ${MAGE_TIMEZONE}
 echo
 GREENTXT "PHP-FPM SETTINGS"
-sed -i "s/\[www\]/\[${MAGE_OWNER}\]/" /etc/php-fpm.d/www.conf
-sed -i "s/user = apache/user = ${MAGE_PHPFPM_USER}/" /etc/php-fpm.d/www.conf
-sed -i "s/group = apache/group = ${MAGE_PHPFPM_USER}/" /etc/php-fpm.d/www.conf
-sed -i "s/^listen =.*/listen = 127.0.0.1:9000/" /etc/php-fpm.d/www.conf
-sed -i "s/;listen.owner = nobody/listen.owner = ${MAGE_OWNER}/" /etc/php-fpm.d/www.conf
-sed -i "s/;listen.group = nobody/listen.group = ${MAGE_PHPFPM_USER}/" /etc/php-fpm.d/www.conf
-sed -i "s/;listen.mode = 0660/listen.mode = 0660/" /etc/php-fpm.d/www.conf
+cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/\[www\]/\[${MAGE_OWNER}\]/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/user = apache/user = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/group = apache/group = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/^listen =.*/listen = /var/run/${MAGE_DOMAIN}.socket/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/;listen.owner = nobody/listen.owner = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/;listen.group = nobody/listen.group = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/;listen.mode = 0660/listen.mode = 0660/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i '/PHPSESSID/d' /etc/php.ini
 sed -i "s,.*date.timezone.*,date.timezone = ${MAGE_TIMEZONE}," /etc/php.ini
-sed -i '/sendmail_path/,$d' /etc/php-fpm.d/www.conf
+sed -i '/sendmail_path/,$d' /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 
 cat >> /etc/php-fpm.d/www.conf <<END
 ;;
@@ -1280,19 +1281,19 @@ wget -qO /etc/nginx/fastcgi_params  ${NGINX_BASE}magento${MAGE_VERSION}/fastcgi_
 wget -qO /etc/nginx/nginx.conf  ${NGINX_BASE}magento${MAGE_VERSION}/nginx.conf
 mkdir -p /etc/nginx/sites-enabled
 mkdir -p /etc/nginx/sites-available && cd $_
-curl -s ${GITHUB_REPO_API_URL}/sites-available 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
-ln -s /etc/nginx/sites-available/magento${MAGE_VERSION}.conf /etc/nginx/sites-enabled/magento${MAGE_VERSION}.conf
-ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
-mkdir -p /etc/nginx/conf_m${MAGE_VERSION} && cd /etc/nginx/conf_m${MAGE_VERSION}/
+curl -s ${GITHUB_REPO_API_URL}/sites-available/${MAGE_DOMAIN} 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
+ln -s /etc/nginx/sites-available/${MAGE_DOMAIN}.conf /etc/nginx/sites-enabled/${MAGE_DOMAIN}.conf
+#ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
+mkdir -p /etc/nginx/conf_${MAGE_DOMAIN} && cd /etc/nginx/conf_${MAGE_DOMAIN}/
 curl -s ${GITHUB_REPO_API_URL}/conf_m2 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
 
-sed -i "s/user  nginx;/user  ${MAGE_OWNER};/" /etc/nginx/nginx.conf
-sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/sites-available/magento${MAGE_VERSION}.conf
+#sed -i "s/user  nginx;/user  ${MAGE_OWNER};/" /etc/nginx/nginx.conf
+sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/nginx.conf
-sed -i "s,/var/www/html,${MAGE_WEB_ROOT_PATH},g" /etc/nginx/sites-available/magento${MAGE_VERSION}.conf
+sed -i "s,/var/www/html,${MAGE_WEB_ROOT_PATH},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 
 MAGE_ADMIN_PATH=$(grep -Po "(?<='frontName' => ')\w*(?=')" ${MAGE_WEB_ROOT_PATH}/app/etc/env.php)
-sed -i "s/ADMIN_PLACEHOLDER/${MAGE_ADMIN_PATH}/" /etc/nginx/conf_m${MAGE_VERSION}/extra_protect.conf
+sed -i "s/ADMIN_PLACEHOLDER/${MAGE_ADMIN_PATH}/" /etc/nginx/conf_${MAGE_DOMAIN}/extra_protect.conf
 ADMIN_HTTP_PASSWD=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 6 | head -n 1)
 htpasswd -b -c /etc/nginx/.admin admin ${ADMIN_HTTP_PASSWD}  >/dev/null 2>&1
 echo
@@ -1303,22 +1304,22 @@ GREENTXT "PHPMYADMIN INSTALLATION AND CONFIGURATION"
      dnf -y -q install phpMyAdmin
      USER_IP=${SSH_CLIENT%% *} 
      sed -i "s/.*blowfish_secret.*/\$cfg['blowfish_secret'] = '${BLOWFISHCODE}';/" /etc/phpMyAdmin/config.inc.php
-     sed -i "s/PHPMYADMIN_PLACEHOLDER/mysql_${PMA_FOLDER}/g" /etc/nginx/conf_m${MAGE_VERSION}/phpmyadmin.conf
+     sed -i "s/PHPMYADMIN_PLACEHOLDER/mysql_${PMA_FOLDER}/g" /etc/nginx/conf_${MAGE_DOMAIN}/phpmyadmin.conf
      sed -i "5i \\
            auth_basic  \"please login\"; \\
-           auth_basic_user_file .mysql;"  /etc/nginx/conf_m${MAGE_VERSION}/phpmyadmin.conf
+           auth_basic_user_file .mysql;"  /etc/nginx/conf_${MAGE_DOMAIN}/phpmyadmin.conf
 	 	   
      htpasswd -b -c /etc/nginx/.mysql mysql ${PMA_PASSWD}  >/dev/null 2>&1
      echo
      systemctl restart nginx.service
-cat >> /opt/webscoot/cfg/.webscoot_index <<END
+cat >> /opt/webscoot/cfg/.${MAGE_DOMAIN} <<END
 pma   mysql_${PMA_FOLDER}   mysql   ${PMA_PASSWD}
 END
 echo
 echo
 if [ -f /etc/systemd/system/varnish.service ]; then
 GREENTXT "VARNISH CACHE CONFIGURATION"
-    sed -i "s/MAGE_OWNER/${MAGE_OWNER}/g"  /etc/systemd/system/varnish.service
+    sed -i "s/MAGE_OWNER/varnish/g"  /etc/systemd/system/varnish.service
     systemctl enable varnish.service >/dev/null 2>&1
     chmod u+x ${MAGE_WEB_ROOT_PATH}/bin/magento
     su ${MAGE_OWNER} -s /bin/bash -c "${MAGE_WEB_ROOT_PATH}/bin/magento config:set --scope=default --scope-code=0 system/full_page_cache/caching_application 2"
@@ -1344,15 +1345,15 @@ echo
 GREENTXT "SYSTEM AUTO UPDATE WITH DNF AUTOMATIC"
 sed -i 's/apply_updates = no/apply_updates = yes/' /etc/dnf/automatic.conf
 sed -i 's/emit_via = stdio/emit_via = email/' /etc/dnf/automatic.conf
-sed -i "s/email_from =.*/email_from = dnf-automatic@${MAGE_DOMAIN}/" /etc/dnf/automatic.conf
-sed -i "s/email_to = root/email_to = ${MAGE_ADMIN_EMAIL}/" /etc/dnf/automatic.conf
+sed -i "s/email_from =.*/email_from = server@webscoot.io/" /etc/dnf/automatic.conf
+sed -i "s/email_to = root/email_to = server@webscoot.io/" /etc/dnf/automatic.conf
 systemctl enable --now dnf-automatic.timer
 echo
 GREENTXT "LETSENCRYPT SSL CERTIFICATE REQUEST"
 wget -q https://dl.eff.org/certbot-auto -O /usr/local/bin/certbot-auto
 chmod +x /usr/local/bin/certbot-auto
 certbot-auto --install-only
-certbot-auto certonly --agree-tos --no-eff-email --email ${MAGE_ADMIN_EMAIL} --webroot -w ${MAGE_WEB_ROOT_PATH}/pub/
+certbot-auto certonly --nginx --agree-tos --no-eff-email --register-unsafely-without-email -n -d ${MAGE_DOMAIN} www.${MAGE_DOMAIN}
 systemctl reload nginx.service
 echo
 GREENTXT "GENERATE DHPARAM FOR NGINX SSL"
@@ -1366,8 +1367,8 @@ GREENTXT "SIMPLE LOGROTATE SCRIPT FOR MAGENTO LOGS"
 cat > /etc/logrotate.d/magento <<END
 ${MAGE_WEB_ROOT_PATH}/var/log/*.log
 {
-su ${MAGE_OWNER} ${MAGE_PHPFPM_USER}
-create 660 ${MAGE_OWNER} ${MAGE_PHPFPM_USER}
+su ${MAGE_OWNER} ${MAGE_OWNER}
+create 660 ${MAGE_OWNER} ${MAGE_OWNER}
 weekly
 rotate 2
 notifempty
@@ -1379,7 +1380,7 @@ echo
 GREENTXT "SERVICE STATUS WITH E-MAIL ALERTING"
 wget -qO /etc/systemd/system/service-status-mail@.service ${REPO_WEBSCOOT_TMP}service-status-mail@.service
 wget -qO /usr/local/bin/service-status-mail.sh ${REPO_WEBSCOOT_TMP}service-status-mail.sh
-sed -i "s/MAGEADMINEMAIL/${MAGE_ADMIN_EMAIL}/" /usr/local/bin/service-status-mail.sh
+sed -i "s/MAGEADMINEMAIL/server@webscoot.io/" /usr/local/bin/service-status-mail.sh
 sed -i "s/DOMAINNAME/${MAGE_DOMAIN}/" /usr/local/bin/service-status-mail.sh
 chmod u+x /usr/local/bin/service-status-mail.sh
 systemctl daemon-reload
@@ -1389,7 +1390,7 @@ YELLOWTXT "Hourly cronjob created"
 pip3 -q install --no-cache-dir --upgrade mwscan
 cat > /etc/cron.hourly/mwscan <<END
 ## MAGENTO MALWARE SCANNER
-mwscan --newonly --quiet ${MAGE_WEB_ROOT_PATH} | ts | tee -a /var/log/mwscan.log | ifne mailx -s "Malware found at $(hostname)" ${MAGE_ADMIN_EMAIL}
+mwscan --newonly --quiet ${MAGE_WEB_ROOT_PATH} | ts | tee -a /var/log/mwscan.log | ifne mailx -s "Malware found at $(hostname)" server@webscoot.io
 END
 chmod +x /etc/cron.hourly/mwscan
 echo
@@ -1463,7 +1464,7 @@ systemctl restart nginx.service
 systemctl restart php-fpm.service
 
 cd ${MAGE_WEB_ROOT_PATH}
-chown -R ${MAGE_OWNER}:${MAGE_PHPFPM_USER} ${MAGE_WEB_ROOT_PATH%/*}
+chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH%/*}
 echo
 GREENTXT "CLEAN MAGENTO CACHE AND ENABLE DEVELOPER MODE"
 rm -rf var/*
@@ -1554,7 +1555,7 @@ su ${MAGE_OWNER} -s /bin/bash
 or run commands from root as user:
 su ${MAGE_OWNER} -s /bin/bash -c 'bin/magento'
 
-===========================  INSTALLATION LOG  ======================================" | tee /opt/webscoot/.install.log
+===========================  INSTALLATION LOG  ======================================" | tee /opt/webscoot/.logs_${MAGE_DOMAIN}
 echo
 echo
 GREENTXT "SERVER IS READY. THANK YOU"
