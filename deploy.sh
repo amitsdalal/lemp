@@ -1,8 +1,6 @@
 #!/bin/bash
 
-SELF=$(basename $0)
-WEBX_VER="0.0.5"
-WEBSCOOT_BASE="https://webscoot.io"
+WEBX_VER="0.0.6"
 
 ###################################################################################
 ###                            DEFINE LINKS AND PACKAGES                        ###
@@ -188,35 +186,6 @@ if [[ ${RESULT} == up ]]; then
   echo
   exit 1
 fi
-
-# check if you need update
-#    MD5_NEW=$(curl -sL ${WEBSCOOT_BASE} > wescoot.sh.new && md5sum wescoot.sh.new | awk '{print $1}')
-#        MD5_OLD=$(md5sum ${SELF} | awk '{print $1}')
-#            if [[ "${MD5_NEW}" == "${MD5_OLD}" ]]; then
-#            GREENTXT "PASS: INTEGRITY CHECK FOR '${SELF}' OK"
-#            rm wescoot.sh.new
-#            elif [[ "${MD5_NEW}" != "${MD5_OLD}" ]]; then
-#            echo
-#            YELLOWTXT "INTEGRITY CHECK FOR '${SELF}'"
-#            YELLOWTXT "DETECTED DIFFERENT MD5 CHECKSUM"
-#            YELLOWTXT "REMOTE REPOSITORY FILE HAS SOME CHANGES"
-#            REDTXT "IF YOU HAVE LOCAL CHANGES - SKIP UPDATES"
-#            echo
-#                echo -n "---> Would you like to update the file now?  [y/n][y]:"
-#		read update_agree
-#		if [ "${update_agree}" == "y" ];then
-#		mv wescoot.sh.new ${SELF}
-#		echo
-#               GREENTXT "THE FILE HAS BEEN UPGRADED, PLEASE RUN IT AGAIN"
-#		echo
-#               exit 1
-#            else
-#        echo
-#        YELLOWTXT "NEW FILE SAVED TO WEBSCOOT_NEW"
-#        echo
-#  fi
-#fi
-
 
 # do we have CentOS?
 if grep "CentOS.* ${CENTOS_VERSION}\." /etc/centos-release  > /dev/null 2>&1; then
