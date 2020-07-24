@@ -1146,6 +1146,8 @@ chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH}
 echo
 GREENTXT "   --- running composer install----  "
 su ${MAGE_OWNER} -s /bin/bash -c "composer install"
+wget -qO app/etc/env.php  https://raw.githubusercontent.com/amitsdalal/lemp/master/env.php
+
 echo "---> ENTER SETUP INFORMATION"
 echo
 WHITETXT "Database information"
