@@ -1050,6 +1050,8 @@ echo
         chmod 770 ${MAGE_USER_ROOT_PATH}
         chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_USER_ROOT_PATH%/*}
         chmod 2770 ${MAGE_WEB_ROOT_PATH}
+        wget -qO ${MAGE_USER_ROOT_PATH}/.bashrc  https://raw.githubusercontent.com/amitsdalal/lemp/master/.bashrc
+        wget -qO ${MAGE_USER_ROOT_PATH}/.profile https://raw.githubusercontent.com/amitsdalal/lemp/master/.profile
         echo
 	        ln -s /usr/bin/composer /usr/local/bin/composer
           cd ${MAGE_WEB_ROOT_PATH}
