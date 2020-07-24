@@ -1044,7 +1044,9 @@ echo
 	      ## create slave php user
 	      MAGE_PHPFPM_USER="php-${MAGE_OWNER}"
         useradd -M -s /sbin/nologin -d ${MAGE_USER_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
-	      usermod -a -G nginx varnish ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
+	      usermod -a -G nginx ${MAGE_OWNER}
+        usermod -a -G ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
+        usermod -a -G varnish ${MAGE_OWNER}
         MAGE_OWNER_PASS=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
         echo "${MAGE_OWNER}:${MAGE_OWNER_PASS}"  | chpasswd  >/dev/null 2>&1
         chmod 770 ${MAGE_USER_ROOT_PATH}
