@@ -15,7 +15,9 @@ ELKREPO="7.x"
 # Magento
 MAGE_VERSION="2"
 MAGE_VERSION_FULL=$(curl -s https://api.github.com/repos/magento/magento${MAGE_VERSION}/tags 2>&1 | head -3 | grep -oP '(?<=")\d.*(?=")')
-REPO_MAGE="composer create-project --repository-url=https://repo.magento.com/ magento/project-community-edition"
+#REPO_MAGE="composer create-project --repository-url=https://repo.magento.com/ magento/project-community-edition"
+REPO_MAGE="git clone https://github.com/magento/magento2.git"
+
 
 # Repositories
 REPO_PERCONA="https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
@@ -1030,6 +1032,7 @@ echo
      read -e -p "---> ENTER YOUR DOMAIN OR IP ADDRESS: " -i "myshop.com" MAGE_DOMAIN
      read -e -p "---> ENTER MAGENTO FILES USER NAME: " -i "myshop" MAGE_OWNER
      MAGE_WEB_ROOT_PATH="/home/${MAGE_OWNER}/public_html"
+     MAGE_USER_ROOT_PATH="/home/${MAGE_OWNER}/"
      echo
 	 echo "---> MAGENTO ${MAGE_VERSION} (${MAGE_VERSION_FULL})"
 	 echo "---> WILL BE DOWNLOADED TO ${MAGE_WEB_ROOT_PATH}"
@@ -1037,18 +1040,21 @@ echo
         mkdir -p ${MAGE_WEB_ROOT_PATH} && cd $_
 	      userdel -r centos >/dev/null 2>&1
 	      ## create master user
-        useradd -d ${MAGE_WEB_ROOT_PATH%/*} -s /bin/bash ${MAGE_OWNER} >/dev/null 2>&1
+        useradd -d ${MAGE_USER_ROOT_PATH%/*} -s /bin/bash ${MAGE_OWNER} >/dev/null 2>&1
 	      ## create slave php user
 	      MAGE_PHPFPM_USER="php-${MAGE_OWNER}"
-        useradd -M -s /sbin/nologin -d ${MAGE_WEB_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
+        useradd -M -s /sbin/nologin -d ${MAGE_USER_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
 	      usermod -g ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
+        usermod -g varnish ${MAGE_OWNER}
+        usermod -g nginx ${MAGE_OWNER}
         MAGE_OWNER_PASS=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
         echo "${MAGE_OWNER}:${MAGE_OWNER_PASS}"  | chpasswd  >/dev/null 2>&1
-        chmod 711 /home/${MAGE_OWNER}
-        chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH%/*}
+        chmod 770 ${MAGE_USER_ROOT_PATH}
+        chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_USER_ROOT_PATH%/*}
         chmod 2770 ${MAGE_WEB_ROOT_PATH}
         echo
 	        ln -s /usr/bin/composer /usr/local/bin/composer
+          cd ${MAGE_WEB_ROOT_PATH}
 		      su ${MAGE_OWNER} -s /bin/bash -c "${REPO_MAGE} ."
         echo
      echo
@@ -1078,6 +1084,9 @@ printf "\033c"
 WHITETXT "============================================================================="
 GREENTXT "CREATE MAGENTO DATABASE AND DATABASE USER"
 echo
+read -e -p "---> ENTER YOUR DOMAIN OR IP ADDRESS: " -i "myshop.com" MAGE_DOMAIN
+if [ -f /opt/webscoot/cfg/.${MAGE_DOMAIN} ]; then
+
 MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 MAGE_DB_PASS_GEN=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_{}()<>-' | fold -w 15 | head -n 1)
 MAGE_DB_PASS="${MAGE_DB_PASS_GEN}${RANDOM}"
@@ -1103,6 +1112,10 @@ database   ${MAGE_DB_HOST}   ${MAGE_DB_NAME}   ${MAGE_DB_USER_NAME}   ${MAGE_DB_
 END
 echo
 echo
+else
+REDTXT "${MAGE_DOMAIN} is not created, please choose magento from main menu"
+exit 1
+fi
 pause '------> Press [Enter] key to show menu'
 printf "\033c"
 ;;
@@ -1113,6 +1126,8 @@ printf "\033c"
 
 "install")
 printf "\033c"
+read -e -p "---> ENTER YOUR DOMAIN OR IP ADDRESS: " -i "myshop.com" MAGE_DOMAIN
+if [ -f /opt/webscoot/cfg/.${MAGE_DOMAIN} ]; then
 MAGE_VERSION=$(awk '/webshop/ { print $6 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 MAGE_VERSION_FULL=$(awk '/webshop/ { print $7 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 echo
@@ -1191,7 +1206,10 @@ echo
 cat >> /opt/webscoot/cfg/.${MAGE_DOMAIN} <<END
 mageadmin  ${MAGE_ADMIN_LOGIN}  ${MAGE_ADMIN_PASS}  ${MAGE_ADMIN_EMAIL}  ${MAGE_TIMEZONE}  ${MAGE_LOCALE} ${MAGE_ADMIN_PATH_RANDOM}
 END
-
+else
+REDTXT "${MAGE_DOMAIN} is not created, please choose magento from main menu"
+exit 2
+fi
 pause '------> Press [Enter] key to show menu'
 printf "\033c"
 ;;
@@ -1219,6 +1237,8 @@ if [[ ${RESULT} == up ]]; then
 fi
 
 printf "\033c"
+read -e -p "---> ENTER YOUR DOMAIN OR IP ADDRESS: " -i "myshop.com" MAGE_DOMAIN
+if [ -f /opt/webscoot/cfg/.${MAGE_DOMAIN} ]; then
 MAGE_DOMAIN=$(awk '/webshop/ { print $2 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 MAGE_WEB_ROOT_PATH=$(awk '/webshop/ { print $3 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 MAGE_OWNER=$(awk '/webshop/ { print $4 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
@@ -1254,7 +1274,7 @@ cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/\[www\]/\[${MAGE_OWNER}\]/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/user = apache/user = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/group = apache/group = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
-sed -i "s/^listen =.*/listen = /var/run/${MAGE_DOMAIN}.socket/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s,^listen =.*,listen = /var/run/${MAGE_DOMAIN}.socket," /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/;listen.owner = nobody/listen.owner = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/;listen.group = nobody/listen.group = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/;listen.mode = 0660/listen.mode = 0660/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
@@ -1262,7 +1282,7 @@ sed -i '/PHPSESSID/d' /etc/php.ini
 sed -i "s,.*date.timezone.*,date.timezone = ${MAGE_TIMEZONE}," /etc/php.ini
 sed -i '/sendmail_path/,$d' /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 
-cat >> /etc/php-fpm.d/www.conf <<END
+cat >> /etc/php-fpm.d/${MAGE_DOMAIN}.conf <<END
 ;;
 ;; Custom pool settings
 php_flag[display_errors] = off
@@ -1283,7 +1303,7 @@ mkdir -p /etc/nginx/sites-enabled
 mkdir -p /etc/nginx/sites-available && cd $_
 curl -s ${GITHUB_REPO_API_URL}/sites-available/${MAGE_DOMAIN} 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
 ln -s /etc/nginx/sites-available/${MAGE_DOMAIN}.conf /etc/nginx/sites-enabled/${MAGE_DOMAIN}.conf
-#ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
+ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
 mkdir -p /etc/nginx/conf_${MAGE_DOMAIN} && cd /etc/nginx/conf_${MAGE_DOMAIN}/
 curl -s ${GITHUB_REPO_API_URL}/conf_m2 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
 
@@ -1291,6 +1311,7 @@ curl -s ${GITHUB_REPO_API_URL}/conf_m2 2>&1 | awk -F'"' '/download_url/ {print $
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/nginx.conf
 sed -i "s,/var/www/html,${MAGE_WEB_ROOT_PATH},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
+sed -i "s,127.0.0.1:9000,/var/run/${MAGE_DOMAIN}.socket,g" /etc/nginx/conf_${MAGE_DOMAIN}/maps.conf
 
 MAGE_ADMIN_PATH=$(grep -Po "(?<='frontName' => ')\w*(?=')" ${MAGE_WEB_ROOT_PATH}/app/etc/env.php)
 sed -i "s/ADMIN_PLACEHOLDER/${MAGE_ADMIN_PATH}/" /etc/nginx/conf_${MAGE_DOMAIN}/extra_protect.conf
@@ -1562,6 +1583,10 @@ GREENTXT "SERVER IS READY. THANK YOU"
 echo "PS1='\[\e[37m\][\[\e[m\]\[\e[32m\]\u\[\e[m\]\[\e[37m\]@\[\e[m\]\[\e[35m\]\h\[\e[m\]\[\e[37m\]:\[\e[m\]\[\e[36m\]\W\[\e[m\]\[\e[37m\]]\[\e[m\]$ '" >> /etc/bashrc
 echo
 echo
+else
+REDTXT "${MAGE_DOMAIN} is not created, please choose magento from main menu"
+exit 3
+fi
 pause '---> Press [Enter] key to show menu'
 ;;
 
