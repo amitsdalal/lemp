@@ -1040,13 +1040,11 @@ echo
         mkdir -p ${MAGE_WEB_ROOT_PATH} && cd $_
 	      userdel -r centos >/dev/null 2>&1
 	      ## create master user
-        useradd -d ${MAGE_USER_ROOT_PATH%/*} -s /bin/bash ${MAGE_OWNER} >/dev/null 2>&1
+        useradd -d ${MAGE_USER_ROOT_PATH} -s /bin/bash ${MAGE_OWNER} >/dev/null 2>&1
 	      ## create slave php user
 	      MAGE_PHPFPM_USER="php-${MAGE_OWNER}"
         useradd -M -s /sbin/nologin -d ${MAGE_USER_ROOT_PATH%/*} ${MAGE_PHPFPM_USER} >/dev/null 2>&1
-	      usermod -g ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
-        usermod -g varnish ${MAGE_OWNER}
-        usermod -g nginx ${MAGE_OWNER}
+	      usermod -a -G nginx varnish ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
         MAGE_OWNER_PASS=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
         echo "${MAGE_OWNER}:${MAGE_OWNER_PASS}"  | chpasswd  >/dev/null 2>&1
         chmod 770 ${MAGE_USER_ROOT_PATH}
@@ -1146,6 +1144,8 @@ DB_PASS=$(awk '/database/ { print $5 }' /opt/webscoot/cfg/.${MAGE_DOMAIN})
 cd ${MAGE_WEB_ROOT_PATH}
 chown -R ${MAGE_OWNER}:${MAGE_OWNER} ${MAGE_WEB_ROOT_PATH}
 echo
+GREENTXT "   --- running composer install----  "
+su ${MAGE_OWNER} -s /bin/bash -c "composer install"
 echo "---> ENTER SETUP INFORMATION"
 echo
 WHITETXT "Database information"
