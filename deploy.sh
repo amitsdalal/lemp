@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WEBX_VER="0.0.6"
+WEBX_VER="0.0.7"
 
 ###################################################################################
 ###                            DEFINE LINKS AND PACKAGES                        ###
@@ -1047,6 +1047,7 @@ echo
 	      usermod -a -G nginx ${MAGE_OWNER}
         usermod -a -G ${MAGE_PHPFPM_USER} ${MAGE_OWNER}
         usermod -a -G varnish ${MAGE_OWNER}
+        usermod -a -G ${MAGE_OWNER} nginx
         MAGE_OWNER_PASS=$(head -c 500 /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&?=+_[]{}()<>-' | fold -w 15 | head -n 1)
         echo "${MAGE_OWNER}:${MAGE_OWNER_PASS}"  | chpasswd  >/dev/null 2>&1
         chmod 770 ${MAGE_USER_ROOT_PATH}
@@ -1317,7 +1318,10 @@ curl -s ${GITHUB_REPO_API_URL}/conf_m2 2>&1 | awk -F'"' '/download_url/ {print $
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/nginx.conf
 sed -i "s,/var/www/html,${MAGE_WEB_ROOT_PATH},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
-sed -i "s,127.0.0.1:9000,/var/run/${MAGE_DOMAIN}.socket,g" /etc/nginx/conf_${MAGE_DOMAIN}/maps.conf
+sed -i "s,127.0.0.1:9000,unix:/var/run/${MAGE_DOMAIN}.socket,g" /etc/nginx/conf_${MAGE_DOMAIN}/maps.conf
+sed -i "s,MAGE_PHP_ROUTE,MAGE_PHP_ROUTE-${MAGE_OWNER},g" /etc/nginx/conf_${MAGE_DOMAIN}/*
+sed -i "s,conf_m2,conf_${MAGE_DOMAIN},g" /etc/nginx/conf_${MAGE_DOMAIN}/*
+sed -i "s,conf_m2,conf_${MAGE_DOMAIN},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 
 MAGE_ADMIN_PATH=$(grep -Po "(?<='frontName' => ')\w*(?=')" ${MAGE_WEB_ROOT_PATH}/app/etc/env.php)
 sed -i "s/ADMIN_PLACEHOLDER/${MAGE_ADMIN_PATH}/" /etc/nginx/conf_${MAGE_DOMAIN}/extra_protect.conf
