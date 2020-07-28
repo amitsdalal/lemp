@@ -1516,13 +1516,13 @@ chmod +x /usr/local/bin/*
 cd ${MAGE_WEB_ROOT_PATH}
 find . -type d -exec chmod 2770 {} \;
 find . -type f -exec chmod 660 {} \;
-setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_PHPFPM_USER}:r-x,o::- ${MAGE_WEB_ROOT_PATH%/*}
-setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_PHPFPM_USER}:rwx,o::- var generated pub/static pub/media
+setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:r-x,o::- ${MAGE_WEB_ROOT_PATH%/*}
+setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:rwx,o::- var generated pub/static pub/media
 chmod ug+x bin/magento
 echo
 echo
 GREENTXT "MAGENTO CRONJOBS"
-su ${MAGE_PHPFPM_USER} -s /bin/bash -c "${MAGE_WEB_ROOT_PATH}/bin/magento cron:install"
+su ${MAGE_OWNER} -s /bin/bash -c "${MAGE_WEB_ROOT_PATH}/bin/magento cron:install"
 echo
 echo
 REDTXT "PRINTING INSTALLATION LOG AND SAVING INTO /opt/webscoot/.install.log"
