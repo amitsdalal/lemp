@@ -1278,13 +1278,10 @@ GREENTXT "SERVER TIMEZONE SETTINGS"
 timedatectl set-timezone ${MAGE_TIMEZONE}
 echo
 GREENTXT "PHP-FPM SETTINGS"
-cp /etc/php-fpm.d/www.conf /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+wget -qO /etc/php-fpm.d/${MAGE_DOMAIN}.conf https://raw.githubusercontent.com/hyperxapps/webscoot-nginx/master/php-fpm.d/def.conf
 sed -i "s/\[www\]/\[${MAGE_OWNER}\]/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
-sed -i "s/user = apache/user = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
-sed -i "s/group = apache/group = nginx/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
+sed -i "s/PHP_USER/${MAGE_OWNER}/g" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s,^listen =.*,listen = /var/run/${MAGE_DOMAIN}.socket," /etc/php-fpm.d/${MAGE_DOMAIN}.conf
-sed -i "s/;listen.owner = nobody/listen.owner = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
-sed -i "s/;listen.group = nobody/listen.group = ${MAGE_OWNER}/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i "s/;listen.mode = 0660/listen.mode = 0660/" /etc/php-fpm.d/${MAGE_DOMAIN}.conf
 sed -i '/PHPSESSID/d' /etc/php.ini
 sed -i "s,.*date.timezone.*,date.timezone = ${MAGE_TIMEZONE}," /etc/php.ini
@@ -1309,7 +1306,8 @@ wget -qO /etc/nginx/fastcgi_params  ${NGINX_BASE}magento${MAGE_VERSION}/fastcgi_
 wget -qO /etc/nginx/nginx.conf  ${NGINX_BASE}magento${MAGE_VERSION}/nginx.conf
 mkdir -p /etc/nginx/sites-enabled
 mkdir -p /etc/nginx/sites-available && cd $_
-curl -s ${GITHUB_REPO_API_URL}/sites-available/${MAGE_DOMAIN} 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
+#curl -s ${GITHUB_REPO_API_URL}/sites-available/${MAGE_DOMAIN} 2>&1 | awk -F'"' '/download_url/ {print $4 ; system("curl -sO "$4)}' >/dev/null
+wget -qO /etc/nginx/sites-available/${MAGE_DOMAIN}.conf https://raw.githubusercontent.com/hyperxapps/webscoot-nginx/master/magento2/sites-available/magento2.conf
 ln -s /etc/nginx/sites-available/${MAGE_DOMAIN}.conf /etc/nginx/sites-enabled/${MAGE_DOMAIN}.conf
 ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
 mkdir -p /etc/nginx/conf_${MAGE_DOMAIN} && cd /etc/nginx/conf_${MAGE_DOMAIN}/
