@@ -1468,22 +1468,22 @@ cd ${MAGE_WEB_ROOT_PATH}
 su ${MAGE_OWNER} -s /bin/bash -c "bin/magento setup:config:set \
 --cache-backend=redis \
 --cache-backend-redis-server=127.0.0.1 \
---cache-backend-redis-port=6380 \
---cache-backend-redis-db=1 \
+--cache-backend-redis-port=6379 \
+--cache-backend-redis-db=7 \
 -n"
 ## page cache
 su ${MAGE_OWNER} -s /bin/bash -c "bin/magento setup:config:set \
 --page-cache=redis \
 --page-cache-redis-server=127.0.0.1 \
---page-cache-redis-port=6380 \
---page-cache-redis-db=2 \
+--page-cache-redis-port=6379 \
+--page-cache-redis-db=5 \
 -n"
 ## session
 su ${MAGE_OWNER} -s /bin/bash -c "bin/magento setup:config:set \
 --session-save=redis \
 --session-save-redis-host=127.0.0.1 \
 --session-save-redis-port=6379 \
---session-save-redis-log-level=3 \
+--session-save-redis-log-level=6 \
 --session-save-redis-db=1 \
 --session-save-redis-compression-lib=snappy \
 -n"
@@ -1516,10 +1516,10 @@ chmod -R 600 /opt/webscoot/cfg
 chmod +x /usr/local/bin/*
 
 cd ${MAGE_WEB_ROOT_PATH}
-find . -type d -exec chmod 2770 {} \;
-find . -type f -exec chmod 660 {} \;
-setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:r-x,o::- ${MAGE_WEB_ROOT_PATH%/*}
-setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:rwx,o::- var generated pub/static pub/media
+find . -type d -exec chmod 0775 {} \;
+find . -type f -exec chmod 0664 {} \;
+#setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:r-x,o::- ${MAGE_WEB_ROOT_PATH%/*}
+#setfacl -Rdm u:${MAGE_OWNER}:rwx,g:${MAGE_OWNER}:rwx,o::- var generated pub/static pub/media
 chmod ug+x bin/magento
 echo
 echo
