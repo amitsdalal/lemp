@@ -10,7 +10,7 @@ WEBX_VER="0.0.7"
 CENTOS_VERSION="7"
 
 # ELK version lock
-ELKREPO="7.x"
+ELKREPO="6.x"
 
 # Magento
 MAGE_VERSION="2"
