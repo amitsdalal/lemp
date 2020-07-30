@@ -1319,7 +1319,7 @@ sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/sites-available/${MAGE_DOMAIN
 sed -i "s/example.com/${MAGE_DOMAIN}/g" /etc/nginx/nginx.conf
 sed -i "s,/var/www/html,${MAGE_WEB_ROOT_PATH},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 sed -i "s,127.0.0.1:9000,unix:/var/run/${MAGE_DOMAIN}.socket,g" /etc/nginx/conf_${MAGE_DOMAIN}/maps.conf
-sed -i "s,MAGE_PHP_ROUTE,MAGE_PHP_ROUTE-${MAGE_OWNER},g" /etc/nginx/conf_${MAGE_DOMAIN}/*
+sed -i "s,MAGE_PHP_ROUTE,MAGE_PHP_ROUTE_${MAGE_OWNER},g" /etc/nginx/conf_${MAGE_DOMAIN}/*
 sed -i "s,conf_m2,conf_${MAGE_DOMAIN},g" /etc/nginx/conf_${MAGE_DOMAIN}/*
 sed -i "s,conf_m2,conf_${MAGE_DOMAIN},g" /etc/nginx/sites-available/${MAGE_DOMAIN}.conf
 
