@@ -662,7 +662,7 @@ if [ "${repo_remi_install}" == "y" ];then
           echo
             GREENTXT "Remi repository installation:"
 	    echo
-	    read -e -p "---> Enter required PHP version: " -i "73" PHP_VERSION
+	    read -e -p "---> Enter required PHP version: " -i "72" PHP_VERSION
             echo
             echo -n "     PROCESSING  "
             long_progress &
@@ -801,25 +801,25 @@ echo
 echo -n "---> Start Varnish Cache installation? [y/n][n]:"
 read varnish_install
 if [ "${varnish_install}" == "y" ];then
-cat > /etc/yum.repos.d/varnish6.repo <<END
-[varnishcache_varnish64]
-name=varnishcache_varnish64
-baseurl=https://packagecloud.io/varnishcache/varnish64/el/7/\$basearch
+cat > /etc/yum.repos.d/varnish5.repo <<END
+[varnishcache_varnish52]
+name=varnishcache_varnish52
+baseurl=https://packagecloud.io/varnishcache/varnish5/el/7/\$basearch
 repo_gpgcheck=1
 gpgcheck=0
 enabled=1
-gpgkey=https://packagecloud.io/varnishcache/varnish64/gpgkey
+gpgkey=https://packagecloud.io/varnishcache/varnish5/gpgkey
 sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 metadata_expire=300
 
-[varnishcache_varnish64-source]
-name=varnishcache_varnish64-source
-baseurl=https://packagecloud.io/varnishcache/varnish64/el/7/SRPMS
+[varnishcache_varnish52-source]
+name=varnishcache_varnish52-source
+baseurl=https://packagecloud.io/varnishcache/varnish5/el/7/SRPMS
 repo_gpgcheck=1
 gpgcheck=0
 enabled=1
-gpgkey=https://packagecloud.io/varnishcache/varnish64/gpgkey
+gpgkey=https://packagecloud.io/varnishcache/varnish5/gpgkey
 sslverify=1
 sslcacert=/etc/pki/tls/certs/ca-bundle.crt
 metadata_expire=300
@@ -1354,7 +1354,7 @@ GREENTXT "VARNISH CACHE CONFIGURATION"
     systemctl enable varnish.service >/dev/null 2>&1
     chmod u+x ${MAGE_WEB_ROOT_PATH}/bin/magento
     su ${MAGE_OWNER} -s /bin/bash -c "${MAGE_WEB_ROOT_PATH}/bin/magento config:set --scope=default --scope-code=0 system/full_page_cache/caching_application 2"
-    php ${MAGE_WEB_ROOT_PATH}/bin/magento varnish:vcl:generate --export-version=6 --output-file=/etc/varnish/default.vcl
+    php ${MAGE_WEB_ROOT_PATH}/bin/magento varnish:vcl:generate --export-version=5 --output-file=/etc/varnish/default.vcl
     systemctl restart varnish.service
     wget -O /etc/varnish/devicedetect.vcl https://raw.githubusercontent.com/varnishcache/varnish-devicedetect/master/devicedetect.vcl >/dev/null 2>&1
     wget -O /etc/varnish/devicedetect-include.vcl ${REPO_WEBSCOOT_TMP}devicedetect-include.vcl >/dev/null 2>&1
